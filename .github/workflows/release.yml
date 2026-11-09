@@ -73,9 +73,12 @@ jobs:
           gh release create "$GITHUB_REF_NAME" dist/* --title "canary $GITHUB_REF_NAME" --generate-notes
 
   pages:
+    # The github-pages environment only accepts master: deploy from there.
     needs: release
-    uses: ./.github/workflows/pages.yml
+    runs-on: ubuntu-latest
     permissions:
-      contents: read
-      pages: write
-      id-token: write
+      actions: write
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run pages.yml --repo "$GITHUB_REPOSITORY" --ref master

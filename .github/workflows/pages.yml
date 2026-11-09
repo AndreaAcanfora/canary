@@ -3,7 +3,6 @@ name: Pages
 # Publishes site/ with the firmware of the latest release, so that the
 # "Install" button can flash it from the browser (same origin, no CORS).
 on:
-  workflow_call:
   workflow_dispatch:
 
 permissions:
