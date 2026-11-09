@@ -131,7 +131,10 @@ def main():
     ohp = subprocess.Popen(["ohp", "serve", "-addr", f"127.0.0.1:{OHP_PORT}", "-key", KEY])
     qemu = subprocess.Popen(
         [
-            "qemu-system-riscv32", "-nographic", "-icount", "3", "-machine", "esp32c3",
+            # Not -nographic: it multiplexes the QEMU monitor on stdio and eats
+            # 0x01 (Ctrl-A), a byte every Improv frame contains.
+            "qemu-system-riscv32", "-display", "none", "-monitor", "none", "-serial", "stdio",
+            "-icount", "3", "-machine", "esp32c3",
             "-drive", f"file={image},if=mtd,format=raw",
             "-nic", f"user,model=open_eth,hostfwd=tcp:127.0.0.1:{WEB_PORT}-:80",
         ],
