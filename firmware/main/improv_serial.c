@@ -133,7 +133,21 @@ static int read_console(uint8_t *buf, size_t n)
 #if CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG
     return usb_serial_jtag_read_bytes(buf, n, portMAX_DELAY);
 #else
-    return uart_read_bytes(CONSOLE_UART, buf, n, portMAX_DELAY);
+    // uart_read_bytes waits for the whole length: wait for one byte, then
+    // take whatever else is already buffered.
+    int got = uart_read_bytes(CONSOLE_UART, buf, 1, portMAX_DELAY);
+    if (got == 1) {
+        size_t more = 0;
+        uart_get_buffered_data_len(CONSOLE_UART, &more);
+        if (more > n - 1) {
+            more = n - 1;
+        }
+        if (more > 0) {
+            int r = uart_read_bytes(CONSOLE_UART, buf + 1, more, 0);
+            got += r > 0 ? r : 0;
+        }
+    }
+    return got;
 #endif
 }
 
