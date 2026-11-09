@@ -1,0 +1,5 @@
+# Extra defaults for the QEMU test build (see tests/qemu_test.py).
+CONFIG_CANARY_QEMU=y
+CONFIG_ETH_USE_OPENETH=y
+CONFIG_ESP_CONSOLE_UART_DEFAULT=y
+CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=n

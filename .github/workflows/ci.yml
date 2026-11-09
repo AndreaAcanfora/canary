@@ -1,0 +1,90 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  IDF_VERSION: v5.5.6
+  OHP_VERSION: v0.3.0
+
+jobs:
+  host:
+    name: Core tests and Linux port (${{ matrix.cc }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        cc: [gcc, clang]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+          cache: false
+      - run: go install github.com/AndreaAcanfora/openheartbeat/cmd/ohp@${OHP_VERSION}
+      - run: make CC=${{ matrix.cc }} test linux
+      - run: OHP=$(go env GOPATH)/bin/ohp tests/e2e_linux.sh
+
+  firmware:
+    name: Firmware (${{ matrix.target }})
+    runs-on: ubuntu-latest
+    container: espressif/idf:v5.5.6
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [esp32c3, esp32s3, esp32]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        shell: bash
+        working-directory: firmware
+        run: |
+          . $IDF_PATH/export.sh
+          idf.py -B build -DIDF_TARGET=${{ matrix.target }} build
+          cd build
+          python -m esptool --chip ${{ matrix.target }} merge_bin -o canary-${{ matrix.target }}.bin @flash_args
+          ls -l canary-${{ matrix.target }}.bin
+      - uses: actions/upload-artifact@v4
+        with:
+          name: firmware-${{ matrix.target }}
+          path: firmware/build/canary-${{ matrix.target }}.bin
+          if-no-files-found: error
+
+  qemu:
+    name: Firmware end to end in QEMU (esp32c3)
+    runs-on: ubuntu-latest
+    container: espressif/idf:v5.5.6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+          cache: false
+      - run: go install github.com/AndreaAcanfora/openheartbeat/cmd/ohp@${OHP_VERSION}
+      - name: Install QEMU
+        shell: bash
+        run: |
+          apt-get update -qq
+          apt-get install -y -qq libgcrypt20 libglib2.0-0 libpixman-1-0 libsdl2-2.0-0 libslirp0 >/dev/null
+          python3 $IDF_PATH/tools/idf_tools.py install qemu-riscv32
+      - name: Build for QEMU
+        shell: bash
+        working-directory: firmware
+        run: |
+          . $IDF_PATH/export.sh
+          idf.py -B build-qemu -DIDF_TARGET=esp32c3 -DSDKCONFIG=build-qemu/sdkconfig \
+            -DSDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.qemu" build
+          cd build-qemu
+          python -m esptool --chip esp32c3 merge_bin --fill-flash-size 4MB -o qemu-flash.bin @flash_args
+      - name: Run
+        shell: bash
+        run: |
+          . $IDF_PATH/export.sh
+          export PATH=$(go env GOPATH)/bin:$PATH
+          timeout 600 python3 tests/qemu_test.py firmware/build-qemu/qemu-flash.bin

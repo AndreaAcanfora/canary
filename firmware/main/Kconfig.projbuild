@@ -1,0 +1,43 @@
+menu "canary"
+
+    config CANARY_LED_GPIO
+        int "Status LED GPIO (-1: none)"
+        default 8 if IDF_TARGET_ESP32C3
+        default 2 if IDF_TARGET_ESP32
+        default -1
+        help
+            GPIO of a plain LED. ESP32-C3 SuperMini boards have a blue LED on
+            GPIO 8, wired active low. The setup page can override it.
+
+    config CANARY_LED_ACTIVE_LOW
+        bool "Status LED is active low"
+        default y if IDF_TARGET_ESP32C3
+        default n
+
+    config CANARY_BUTTON_GPIO
+        int "Setup button GPIO (-1: none)"
+        default 9 if IDF_TARGET_ESP32C3
+        default 0
+        help
+            Pressing this button (BOOT on most boards) opens the setup page
+            for another 15 minutes.
+
+    config CANARY_QEMU
+        bool "Build for the QEMU emulator (Ethernet instead of Wi-Fi)"
+        default n
+        select ETH_USE_OPENETH
+        help
+            Uses the OpenCores Ethernet MAC emulated by QEMU, and the default
+            configuration below. For automated tests only.
+
+    config CANARY_TEST_URL
+        string "Check URL of the default alive probe (QEMU builds)"
+        depends on CANARY_QEMU
+        default "http://10.0.2.2:18080/ping/e2etestkey0123456789abcdef012345/qemu-alive?create=1"
+
+    config CANARY_TEST_CONTACT_URL
+        string "Check URL of the default contact probe (QEMU builds)"
+        depends on CANARY_QEMU
+        default "http://10.0.2.2:18080/ping/e2etestkey0123456789abcdef012345/qemu-contact?create=1"
+
+endmenu

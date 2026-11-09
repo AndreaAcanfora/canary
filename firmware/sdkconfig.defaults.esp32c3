@@ -1,0 +1,2 @@
+# Most ESP32-C3 boards (SuperMini, XIAO) only have the native USB port.
+CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y
