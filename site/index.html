@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>canary: a $4 dead man's switch</title>
+<meta name="description" content="An ESP32 that tells your phone when the power goes out, the freezer warms up or water reaches the floor. Flash it from the browser in 30 seconds.">
+<meta property="og:title" content="canary: a $4 dead man's switch for your home">
+<meta property="og:description" content="Power cuts, warm freezers, leaks. Flash an ESP32 from the browser and get alerts from any heartbeat monitor.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='12' fill='%23e0b400'/%3E%3C/svg%3E">
+<script type="module" src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js?module"></script>
+<style>
+:root {
+  --bg: #fbfaf6; --fg: #1c1b18; --mut: #67655d; --line: #e4e0d6; --card: #ffffff;
+  --acc: #e0b400; --acc-ink: #6b5400; --ok: #1f7a4d; --bad: #b3261e; --code: #f2efe7;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12110f; --fg: #edebe4; --mut: #9d9a8f; --line: #2b2a26; --card: #1a1916;
+    --acc: #f2c94c; --acc-ink: #f2c94c; --ok: #5cc28d; --bad: #ff8a80; --code: #22211d;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12110f; --fg: #edebe4; --mut: #9d9a8f; --line: #2b2a26; --card: #1a1916;
+  --acc: #f2c94c; --acc-ink: #f2c94c; --ok: #5cc28d; --bad: #ff8a80; --code: #22211d;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 17px/1.6 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+main { max-width: 860px; margin: 0 auto; padding: 0 16px 64px; }
+a { color: inherit; text-decoration-color: var(--acc); text-underline-offset: 3px; }
+code, pre { font: 14px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--code); border-radius: 6px; }
+code { padding: 1px 5px; white-space: nowrap; }
+pre code { white-space: pre; }
+pre { padding: 14px 16px; overflow-x: auto; }
+header { padding: 56px 0 24px; }
+.mark { display: inline-flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: .02em; }
+.dot { width: 14px; height: 14px; border-radius: 50%; background: var(--acc); box-shadow: 0 0 0 6px color-mix(in srgb, var(--acc) 25%, transparent); animation: beat 3s infinite; }
+@keyframes beat { 0%, 90%, 100% { opacity: 1; } 93% { opacity: .2; } }
+@media (prefers-reduced-motion: reduce) { .dot { animation: none; } }
+h1 { font-size: clamp(32px, 6vw, 52px); line-height: 1.1; margin: 18px 0 14px; letter-spacing: -.02em; }
+.lede { font-size: 20px; color: var(--mut); max-width: 640px; margin: 0; }
+h2 { font-size: 24px; margin: 56px 0 12px; letter-spacing: -.01em; }
+.cta { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin: 28px 0 0; }
+.btn { display: inline-block; padding: 12px 20px; border-radius: 10px; font-weight: 600; text-decoration: none; border: 1px solid var(--line); }
+.btn.primary { background: var(--fg); color: var(--bg); border-color: var(--fg); cursor: pointer; font-size: 17px; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; margin-top: 18px; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px; }
+.card h3 { margin: 0 0 6px; font-size: 18px; }
+.card p { margin: 0; color: var(--mut); font-size: 15px; }
+.flow { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; counter-reset: s; padding: 0; list-style: none; }
+.flow li { border-top: 3px solid var(--acc); padding-top: 10px; font-size: 15px; color: var(--mut); }
+.flow li b { display: block; color: var(--fg); font-size: 16px; }
+.flow li::before { counter-increment: s; content: counter(s); display: block; font-size: 13px; font-weight: 700; color: var(--acc-ink); }
+/* simulator */
+.sim { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px; margin-top: 16px; }
+.sim-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+@media (max-width: 640px) { .sim-grid { grid-template-columns: 1fr; } }
+.ctrl { margin: 10px 0 16px; }
+.ctrl label { display: flex; justify-content: space-between; font-size: 15px; }
+input[type=range] { width: 100%; accent-color: var(--acc); }
+.toggle { display: flex; gap: 8px; flex-wrap: wrap; }
+.toggle button { font: inherit; font-size: 14px; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--line); background: transparent; color: inherit; cursor: pointer; }
+.toggle button[aria-pressed=true] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.led { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--line); margin-right: 6px; vertical-align: middle; }
+.led.on { background: #3b82f6; box-shadow: 0 0 8px #3b82f6; }
+.checks { list-style: none; margin: 0; padding: 0; }
+.checks li { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 15px; }
+.state { font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: .05em; }
+.state.up { color: var(--ok); } .state.down { color: var(--bad); } .state.late { color: var(--acc-ink); }
+.log { margin-top: 10px; height: 150px; overflow: auto; font: 12.5px/1.5 ui-monospace, Menlo, monospace; background: var(--code); border-radius: 8px; padding: 8px 10px; }
+.log .fail, .log .alert { color: var(--bad); } .log .ok { color: var(--ok); }
+.phone { margin-top: 10px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); font-size: 14px; min-height: 44px; }
+.phone.alert { border-color: var(--bad); }
+table { border-collapse: collapse; width: 100%; font-size: 15px; }
+td, th { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+footer { margin-top: 64px; color: var(--mut); font-size: 14px; }
+.small { font-size: 14px; color: var(--mut); }
+</style>
+</head>
+<body>
+<main>
+<header>
+  <span class="mark"><span class="dot" aria-hidden="true"></span> canary</span>
+  <h1>A $4 dead man's switch for your home.</h1>
+  <p class="lede">An ESP32 that sends a heartbeat every minute. When the power goes out, the freezer warms up or water reaches the floor, the heartbeat stops or turns red, and your phone knows.</p>
+  <div class="cta">
+    <esp-web-install-button manifest="manifest.json">
+      <button slot="activate" class="btn primary">Install on an ESP32</button>
+      <span slot="unsupported" class="small">Installing from the browser needs Chrome or Edge on a computer. You can also <a href="https://github.com/AndreaAcanfora/canary#build-and-flash">flash it with esptool</a>.</span>
+      <span slot="not-allowed" class="small">Open this page over https to install.</span>
+    </esp-web-install-button>
+    <a class="btn" href="https://github.com/AndreaAcanfora/canary">GitHub</a>
+  </div>
+  <p class="small">Plug the board in with USB, click Install, pick your Wi-Fi. No toolchain, no account with us.</p>
+</header>
+
+<h2>Things it watches</h2>
+<div class="cards">
+  <div class="card"><h3>Power and internet</h3><p>Plug it into a wall socket. If heartbeats stop, the power or the connection is gone. When it comes back, the first heartbeat says <code>boot=power-on</code>.</p></div>
+  <div class="card"><h3>Freezer and fridge</h3><p>A DS18B20 probe through the door seal. Alert above −15 °C, only if it lasts 10 minutes, so opening the door is fine.</p></div>
+  <div class="card"><h3>Leaks and pumps</h3><p>Any switch: a leak sensor, a float switch in the sump, a door contact. The alert goes out the second it trips.</p></div>
+</div>
+
+<h2>Try it without a board</h2>
+<p class="small">This runs the same rules as the firmware against a pretend heartbeat server. Time runs 60× faster.</p>
+<div class="sim" id="sim">
+  <div class="sim-grid">
+    <div>
+      <div class="ctrl"><span class="led on" id="led"></span><b>canary</b> <span class="small" id="dev">uptime 0 s</span></div>
+      <div class="ctrl">
+        <div class="toggle" role="group" aria-label="Power">
+          <button type="button" id="power" aria-pressed="true">Power on</button>
+          <button type="button" id="leak" aria-pressed="false">Water on the floor</button>
+        </div>
+      </div>
+      <div class="ctrl">
+        <label for="temp"><span>Freezer</span><span id="tempv">−18.0 °C</span></label>
+        <input id="temp" type="range" min="-25" max="5" step="0.5" value="-18">
+        <span class="small">Alert above −15 °C after 10 minutes</span>
+      </div>
+    </div>
+    <div>
+      <b>Heartbeat server</b>
+      <ul class="checks" id="checks"></ul>
+      <div class="phone" id="phone" aria-live="polite"><span class="small">Notifications show up here.</span></div>
+    </div>
+  </div>
+  <div class="log" id="log" aria-label="Signals"></div>
+</div>
+
+<h2>How it works</h2>
+<ol class="flow">
+  <li><b>Sense</b>Once per second the board reads its probes.</li>
+  <li><b>Beat</b>It sends <code>POST /ping/…</code> every minute, and <code>/fail</code> at once when something is wrong.</li>
+  <li><b>Watch</b>A heartbeat server expects the beat. Silence or a fail means trouble.</li>
+  <li><b>Alert</b>The server notifies you: push, email, Telegram, ntfy.</li>
+</ol>
+<p>canary speaks the <a href="https://github.com/AndreaAcanfora/openheartbeat">Open Heartbeat Protocol</a>, the URL scheme that Healthchecks.io and similar services already use. Paste a ping URL from <a href="https://healthchecks.io">Healthchecks.io</a> (the free plan has 20 checks) or run your own server: <code>ohp serve</code>, or self-hosted Healthchecks.</p>
+
+<h2>What you need</h2>
+<table>
+  <tr><th>Part</th><th>Price</th><th>Notes</th></tr>
+  <tr><td>ESP32-C3 SuperMini</td><td>≈ $3</td><td>Any ESP32, ESP32-C3 or ESP32-S3 board works.</td></tr>
+  <tr><td>USB charger and cable</td><td>the one in your drawer</td><td>For the power-cut alarm, plug it into the socket you care about, not a UPS.</td></tr>
+  <tr><td>DS18B20 waterproof probe</td><td>≈ $1.50</td><td>Optional. Data to a GPIO, with a 4.7 kΩ resistor to 3.3 V.</td></tr>
+  <tr><td>Leak or float switch</td><td>≈ $1</td><td>Optional. Between a GPIO and GND.</td></tr>
+</table>
+
+<h2>Setup</h2>
+<ol>
+  <li>Click <b>Install on an ESP32</b>, choose the serial port, then your Wi-Fi network.</li>
+  <li>Open the setup page it links to (or <code>http://canary.local</code>).</li>
+  <li>Add a probe, paste a ping URL, save. The status LED flashes briefly every 3 s when all is well.</li>
+</ol>
+<p class="small">The setup page only accepts changes for 15 minutes after power-on or after pressing BOOT. Ping URLs are secrets, so they are hidden after that.</p>
+
+<h2>No ESP32? Use a Raspberry Pi</h2>
+<p>The same probes run on Linux and read any number from a file: a 1-Wire sensor, a GPIO, the CPU temperature.</p>
+<pre>probe1.type=temp
+probe1.url=https://hc-ping.com/your-uuid
+probe1.source=/sys/class/thermal/thermal_zone0/temp
+probe1.scale=0.001
+probe1.max=80</pre>
+
+<footer>
+  canary is open source (MIT). Made by <a href="https://github.com/AndreaAcanfora">Andrea Acanfora</a>.
+  Part of a small family: <a href="https://github.com/AndreaAcanfora/openheartbeat">openheartbeat</a>,
+  <a href="https://github.com/AndreaAcanfora/a2h-gateway">a2h-gateway</a>, <a href="https://github.com/AndreaAcanfora/statusdoc">statusdoc</a>.
+</footer>
+</main>
+<script src="sim.js"></script>
+</body>
+</html>

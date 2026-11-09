@@ -1,0 +1,11 @@
+{
+  "name": "canary",
+  "version": "@VERSION@",
+  "new_install_prompt_erase": true,
+  "new_install_improv_wait_time": 15,
+  "builds": [
+    { "chipFamily": "ESP32-C3", "parts": [{ "path": "firmware/canary-esp32c3.bin", "offset": 0 }] },
+    { "chipFamily": "ESP32-S3", "parts": [{ "path": "firmware/canary-esp32s3.bin", "offset": 0 }] },
+    { "chipFamily": "ESP32", "parts": [{ "path": "firmware/canary-esp32.bin", "offset": 0 }] }
+  ]
+}

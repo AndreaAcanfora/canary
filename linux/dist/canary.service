@@ -1,0 +1,21 @@
+[Unit]
+Description=canary heartbeat probes
+Documentation=https://github.com/AndreaAcanfora/canary
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+# The configuration holds secrets: root-only on disk, handed to the
+# unprivileged service as a credential.
+LoadCredential=canary.conf:/etc/canary.conf
+ExecStart=/usr/local/bin/canary -c ${CREDENTIALS_DIRECTORY}/canary.conf
+Restart=always
+RestartSec=5
+DynamicUser=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+NoNewPrivileges=yes
+
+[Install]
+WantedBy=multi-user.target

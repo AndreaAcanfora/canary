@@ -4,6 +4,7 @@ SANITIZE ?= -fsanitize=address,undefined -fno-omit-frame-pointer
 CORE_SRC := $(wildcard core/src/*.c)
 CORE_HDR := $(wildcard core/include/canary/*.h)
 LINUX_SRC := $(wildcard linux/*.c)
+VERSION := $(shell cat VERSION)
 
 .PHONY: all test linux clean
 
@@ -18,7 +19,7 @@ test: build/test_core
 
 build/canary: $(LINUX_SRC) $(CORE_SRC) $(CORE_HDR)
 	@mkdir -p build
-	$(CC) $(CFLAGS) -D_DEFAULT_SOURCE -Icore/include -o $@ $(LINUX_SRC) $(CORE_SRC) -lm -ldl
+	$(CC) $(CFLAGS) -D_DEFAULT_SOURCE -DCANARY_VERSION='"$(VERSION)"' -Icore/include -o $@ $(LINUX_SRC) $(CORE_SRC) -lm -ldl
 
 linux: build/canary
 

@@ -1,0 +1,22 @@
+# /etc/canary.conf: keep it readable by root only (chmod 600), check URLs are secrets.
+name=pi-garage
+
+# Power and network of this machine.
+probe1.type=alive
+probe1.url=https://hc-ping.com/REPLACE-WITH-YOUR-UUID
+probe1.interval=60
+
+# CPU temperature (millidegrees in sysfs).
+#probe2.type=temp
+#probe2.url=https://hc-ping.com/REPLACE
+#probe2.source=/sys/class/thermal/thermal_zone0/temp
+#probe2.scale=0.001
+#probe2.max=80
+
+# DS18B20 on the 1-Wire bus (dtoverlay=w1-gpio in /boot/firmware/config.txt).
+#probe3.type=temp
+#probe3.url=https://hc-ping.com/REPLACE
+#probe3.source=/sys/bus/w1/devices/28-REPLACE/temperature
+#probe3.scale=0.001
+#probe3.max=-15
+#probe3.delay=600

@@ -1,0 +1,41 @@
+name: Pages
+
+# Publishes site/ with the firmware of the latest release, so that the
+# "Install" button can flash it from the browser (same origin, no CORS).
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Assemble the site
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag=$(gh release view --json tagName -q .tagName)
+          mkdir -p public/firmware
+          cp site/index.html site/sim.js public/
+          gh release download "$tag" -p 'canary-esp32*.bin' -D public/firmware
+          sed "s/@VERSION@/${tag#v}/" site/manifest.template.json > public/manifest.json
+          ls -lR public
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+      - id: deployment
+        uses: actions/deploy-pages@v4
