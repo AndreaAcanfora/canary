@@ -22,7 +22,7 @@ static esp_netif_t *netif;
 static volatile bool provisioning;
 static esp_timer_handle_t reconnect;
 
-static void on_reconnect(void *arg)
+__attribute__((unused)) static void on_reconnect(void *arg)
 {
     (void)arg;
     if (!provisioning && net_has_credentials()) {
@@ -60,9 +60,11 @@ static void on_event(void *arg, esp_event_base_t base, int32_t id, void *data)
         }
         return;
     }
+#if CONFIG_CANARY_QEMU
     if (base == ETH_EVENT && id == ETHERNET_EVENT_DISCONNECTED) {
         xEventGroupClearBits(events, GOT_IP);
     }
+#endif
 }
 
 #if CONFIG_CANARY_QEMU
@@ -81,8 +83,7 @@ static void start_ethernet(void)
     ESP_ERROR_CHECK(esp_netif_attach(netif, esp_eth_new_netif_glue(eth)));
     ESP_ERROR_CHECK(esp_eth_start(eth));
 }
-#endif
-
+#else
 static void start_wifi(const char *hostname)
 {
     netif = esp_netif_create_default_wifi_sta();
@@ -97,6 +98,7 @@ static void start_wifi(const char *hostname)
     ESP_ERROR_CHECK(esp_timer_create(&timer, &reconnect));
     ESP_ERROR_CHECK(esp_wifi_start());
 }
+#endif
 
 void net_start(const char *hostname)
 {

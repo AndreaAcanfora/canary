@@ -22,8 +22,8 @@ jobs:
       matrix:
         cc: [gcc, clang]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
         with:
           go-version: stable
           cache: false
@@ -40,7 +40,7 @@ jobs:
       matrix:
         target: [esp32c3, esp32s3, esp32]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Build
         shell: bash
         working-directory: firmware
@@ -61,8 +61,8 @@ jobs:
     runs-on: ubuntu-latest
     container: espressif/idf:v5.5.6
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
         with:
           go-version: stable
           cache: false

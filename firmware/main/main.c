@@ -20,6 +20,12 @@
 
 static const char *TAG = "canary";
 
+#ifdef CONFIG_CANARY_LED_ACTIVE_LOW
+#define LED_ACTIVE_LOW true
+#else
+#define LED_ACTIVE_LOW false
+#endif
+
 app_state app;
 
 // Latest pending signal of each probe. A newer signal replaces an older one
@@ -302,7 +308,7 @@ void app_main(void)
     ESP_LOGI(TAG, "canary %s (OHP %s), name %s, started by %s", CANARY_VERSION, OHP_VERSION, app.cfg.name,
              app.reset_reason);
 
-    led_start(app.cfg.led_pin >= 0 ? app.cfg.led_pin : CONFIG_CANARY_LED_GPIO, CONFIG_CANARY_LED_ACTIVE_LOW);
+    led_start(app.cfg.led_pin >= 0 ? app.cfg.led_pin : CONFIG_CANARY_LED_GPIO, LED_ACTIVE_LOW);
     net_start(app.cfg.name);
     improv_start();
     web_start();

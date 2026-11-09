@@ -140,7 +140,7 @@ static void send_form(httpd_req_t *req, const canary_config *cfg, const char *er
         fmt_float(a, sizeof a, p->min);
         fmt_float(b, sizeof b, p->max);
         fmt_float(c, sizeof c, p->hysteresis);
-        char pin[8] = "";
+        char pin[12] = "";
         if (p->pin >= 0) {
             snprintf(pin, sizeof pin, "%d", p->pin);
         }
