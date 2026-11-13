@@ -18,7 +18,7 @@ jobs:
       matrix:
         target: [esp32c3, esp32s3, esp32]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - name: Check that the tag matches VERSION
         shell: bash
         run: test "v$(cat VERSION)" = "${GITHUB_REF_NAME}"
@@ -30,7 +30,7 @@ jobs:
           idf.py -B build -DIDF_TARGET=${{ matrix.target }} build
           cd build
           python -m esptool --chip ${{ matrix.target }} merge_bin -o canary-${{ matrix.target }}.bin @flash_args
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: firmware-${{ matrix.target }}
           path: firmware/build/canary-${{ matrix.target }}.bin
@@ -38,7 +38,7 @@ jobs:
   linux:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - name: Install cross compilers
         run: sudo apt-get update -qq && sudo apt-get install -y -qq gcc-aarch64-linux-gnu gcc-arm-linux-gnueabihf
       - name: Build
@@ -51,7 +51,7 @@ jobs:
             cp build/canary dist/canary-linux-$arch
           done
           file dist/*
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: linux
           path: dist/
@@ -60,8 +60,8 @@ jobs:
     needs: [firmware, linux]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
         with:
           path: dist
           merge-multiple: true
